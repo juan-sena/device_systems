@@ -1,104 +1,149 @@
-from fastapi import APIRouter, HTTPException, Response, Depends
-from app.schemas.user_schema import Usuario, UsuarioResponse, UsuarioUpdate
-from app.dependencies.user_dependencies import get_user_or_404
-from app.data.users_db import usuarios
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.schemas.user_schema import (
+    UserCreate,
+    UserUpdate,
+    UserPatch,
+    UserResponse
+)
+
+from app.dependencies.database_dependency import get_db
+
+from app.services.user_service import (
+    create_user,
+    get_users,
+    get_user_by_id,
+    get_user_by_email,
+    update_user,
+    patch_user,
+    delete_user
+)
 
 router_user = APIRouter()
 
-# GET users
-@router_user.get("/users")
+
+@router_user.get(
+    "/users",
+    response_model=list[UserResponse]
+)
 def obtener_usuarios(
-    role: str = None,
-    is_active: bool = None
+    db: Session = Depends(get_db)
 ):
-
-    resultado = usuarios
-
-    if role is not None:
-        resultado = [
-            usuario for usuario in resultado
-            if usuario.role == role
-        ]
-
-    if is_active is not None:
-        resultado = [
-            usuario for usuario in resultado
-            if usuario.is_active == is_active
-        ]
-
-    return resultado
+    return get_users(db)
 
 
-# GET user by id
-@router_user.get("/users/{user_id}")
+@router_user.get(
+    "/users/{user_id}",
+    response_model=UserResponse
+)
 def obtener_usuario_por_id(
-    usuario = Depends(get_user_or_404)
-):
-    return usuario
-
-
-# POST users
-@router_user.post("/users", response_model=UsuarioResponse, status_code=201)
-def crear_usuario(
-    usuario: Usuario,
-    response: Response
-):
-
-    response.headers["X-App-Name"] = "device_systems"
-    response.headers["X-API-Version"] = "1.0"
-
-    
-    for u in usuarios:
-        if u.email == usuario.email:
-            raise HTTPException(
-                status_code=400,
-                detail="El correo ya existe"
-            )
-
-    usuarios.append(usuario)
-
-    return usuario
-
-
-# PUT user
-@router_user.put("/users/{user_id}")
-def actualizar_usuario(
     user_id: int,
-    usuario: Usuario
+    db: Session = Depends(get_db)
 ):
 
-    for i, u in enumerate(usuarios):
+    user = get_user_by_id(db, user_id)
 
-        if u.id == user_id:
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="Usuario no encontrado"
+        )
 
-           
-            for other in usuarios:
-                if (
-                    other.email == usuario.email
-                    and other.id != user_id
-                ):
-                    raise HTTPException(
-                        status_code=400,
-                        detail="El correo ya existe"
-                    )
+    return user
 
-         
-            usuarios[i] = usuario
-            return usuario
 
-    raise HTTPException(
-        status_code=404,
-        detail="Usuario no encontrado"
+@router_user.post(
+    "/users",
+    response_model=UserResponse,
+    status_code=201
+)
+def crear_usuario(
+    user_data: UserCreate,
+    db: Session = Depends(get_db)
+):
+
+    existing_user = get_user_by_email(
+        db,
+        user_data.email
     )
 
-#Actualizacion parcial del usuario
-@router_user.patch("/users/{user_id}")
-def actualizar_usuario_parcial(
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="El correo ya existe"
+        )
+
+    return create_user(
+        db,
+        user_data
+    )
+
+
+@router_user.put(
+    "/users/{user_id}",
+    response_model=UserResponse
+)
+def actualizar_usuario(
     user_id: int,
-    usuario: UsuarioUpdate
+    user_data: UserUpdate,
+    db: Session = Depends(get_db)
 ):
 
-    datos_actualizados = usuario.model_dump(
+    user = get_user_by_id(
+        db,
+        user_id
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="Usuario no encontrado"
+        )
+
+    existing_user = get_user_by_email(
+        db,
+        user_data.email
+    )
+
+    if (
+        existing_user
+        and existing_user.id != user_id
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="El correo ya existe"
+        )
+
+    return update_user(
+        db,
+        user,
+        user_data
+    )
+
+
+@router_user.patch(
+    "/users/{user_id}",
+    response_model=UserResponse
+)
+def actualizar_usuario_parcial(
+    user_id: int,
+    user_data: UserPatch,
+    db: Session = Depends(get_db)
+):
+
+    user = get_user_by_id(
+        db,
+        user_id
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="Usuario no encontrado"
+        )
+
+    datos_actualizados = user_data.model_dump(
         exclude_unset=True
     )
 
@@ -108,48 +153,52 @@ def actualizar_usuario_parcial(
             detail="Debe enviar al menos un campo para actualizar"
         )
 
-    for u in usuarios:
+    if "email" in datos_actualizados:
 
-        if u.id == user_id:
+        existing_user = get_user_by_email(
+            db,
+            datos_actualizados["email"]
+        )
 
-            # Validar email duplicado solo si se envió email
-            if "email" in datos_actualizados:
+        if (
+            existing_user
+            and existing_user.id != user_id
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="El correo ya existe"
+            )
 
-                for other in usuarios:
-
-                    if (
-                        other.email == datos_actualizados["email"]
-                        and other.id != user_id
-                    ):
-                        raise HTTPException(
-                            status_code=400,
-                            detail="El correo ya existe"
-                        )
-
-            # Actualizar solo los campos enviados
-            for campo, valor in datos_actualizados.items():
-                setattr(u, campo, valor)
-
-            return u
-
-    raise HTTPException(
-        status_code=404,
-        detail="Usuario no encontrado"
+    return patch_user(
+        db,
+        user,
+        datos_actualizados
     )
 
-#Delete user
-@router_user.delete("/users/{user_id}", status_code=204)
-def eliminar_usuario(user_id: int):
 
-    for i, u in enumerate(usuarios):
+@router_user.delete(
+    "/users/{user_id}",
+    status_code=204
+)
+def eliminar_usuario(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
 
-        if u.id == user_id:
-
-            del usuarios[i]
-
-            return
-
-    raise HTTPException(
-        status_code=404,
-        detail="Usuario no encontrado"
+    user = get_user_by_id(
+        db,
+        user_id
     )
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="Usuario no encontrado"
+        )
+
+    delete_user(
+        db,
+        user
+    )
+
+    return
