@@ -6,6 +6,7 @@ from datetime import datetime
 class UserCreate(BaseModel):
     name: str = Field(..., min_length=3)
     email: EmailStr
+    password: str = Field(..., min_length=8)
     role: Literal["admin", "support", "user"]
     is_active: bool = True
 

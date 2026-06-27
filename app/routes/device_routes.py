@@ -1,6 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.dependencies.auth_dependency import (
+    require_admin,
+    require_admin_or_support
+)
+from app.models.user_model import User
+
 from app.schemas.device_schema import (
     DeviceCreate,
     DeviceUpdate,
@@ -50,7 +56,10 @@ def obtener_dispositivos(
         404: {"description": "Dispositivo no encontrado"}
     }
 )
-def obtener_dispositivo_por_id(device_id: int, db: Session = Depends(get_db)):
+def obtener_dispositivo_por_id(
+    device_id: int,
+    db: Session = Depends(get_db)
+):
     device = get_device_by_id(db, device_id)
     if not device:
         raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
@@ -69,7 +78,11 @@ def obtener_dispositivo_por_id(device_id: int, db: Session = Depends(get_db)):
         422: {"description": "Error de validación de datos"}
     }
 )
-def crear_dispositivo(device_data: DeviceCreate, db: Session = Depends(get_db)):
+def crear_dispositivo(
+    device_data: DeviceCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_or_support)
+):
     existing = get_device_by_serial(db, device_data.serial_number)
     if existing:
         raise HTTPException(status_code=400, detail="El número de serie ya existe")
@@ -87,7 +100,12 @@ def crear_dispositivo(device_data: DeviceCreate, db: Session = Depends(get_db)):
         400: {"description": "Número de serie duplicado"}
     }
 )
-def actualizar_dispositivo(device_id: int, device_data: DeviceUpdate, db: Session = Depends(get_db)):
+def actualizar_dispositivo(
+    device_id: int,
+    device_data: DeviceUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_or_support)
+):
     device = get_device_by_id(db, device_id)
     if not device:
         raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
@@ -110,7 +128,11 @@ def actualizar_dispositivo(device_id: int, device_data: DeviceUpdate, db: Sessio
         400: {"description": "Debe enviar al menos un campo para actualizar"}
     }
 )
-def actualizar_dispositivo_parcial(device_id: int, device_data: DevicePatch, db: Session = Depends(get_db)):
+def actualizar_dispositivo_parcial(
+    device_id: int,
+    device_data: DevicePatch,
+    db: Session = Depends(get_db)
+):
     device = get_device_by_id(db, device_id)
     if not device:
         raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
@@ -137,7 +159,11 @@ def actualizar_dispositivo_parcial(device_id: int, device_data: DevicePatch, db:
         404: {"description": "Dispositivo no encontrado"}
     }
 )
-def eliminar_dispositivo(device_id: int, db: Session = Depends(get_db)):
+def eliminar_dispositivo(
+    device_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
     device = get_device_by_id(db, device_id)
     if not device:
         raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
