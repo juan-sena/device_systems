@@ -1,5 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
+
+from app.config.limiter import limiter
+
+from app.dependencies.auth_dependency import get_current_active_user
+from app.models.user_model import User
 
 from app.schemas.user_schema import (
     UserCreate,
@@ -27,8 +32,11 @@ router_user = APIRouter()
     "/users",
     response_model=list[UserResponse]
 )
+@limiter.limit("30/minute")
 def obtener_usuarios(
-    db: Session = Depends(get_db)
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     return get_users(db)
 
@@ -39,7 +47,8 @@ def obtener_usuarios(
 )
 def obtener_usuario_por_id(
     user_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
 
     user = get_user_by_id(db, user_id)

@@ -1,34 +1,62 @@
 # device_systems
 
-## Descripción
-
-device_systems es una API REST desarrollada con FastAPI para la gestión de usuarios, dispositivos tecnológicos y préstamos. Permite crear, consultar, actualizar y eliminar registros mediante operaciones CRUD, aplicando relaciones entre modelos, migraciones controladas con Alembic, consultas con joins, filtros avanzados y manejo de errores.
+API REST desarrollada con **FastAPI** para la gestión de usuarios, dispositivos tecnológicos y préstamos. El proyecto implementa autenticación mediante JWT, autorización por roles, operaciones CRUD, filtros avanzados, middleware personalizado y documentación automática con Swagger.
 
 ---
 
-## Tecnologías utilizadas
+# Descripción
+
+**device_systems** es una API REST diseñada para administrar el préstamo de dispositivos tecnológicos dentro de una organización.
+
+Permite:
+
+* Gestionar usuarios.
+* Gestionar dispositivos.
+* Registrar préstamos.
+* Registrar devoluciones.
+* Consultar el historial de préstamos.
+* Filtrar información mediante parámetros de consulta.
+* Proteger recursos mediante autenticación JWT y autorización por roles.
+
+Además, incorpora buenas prácticas de desarrollo como:
+
+* Arquitectura por capas.
+* SQLAlchemy ORM.
+* Migraciones con Alembic.
+* Validación de datos con Pydantic v2.
+* Middleware personalizado.
+* Rate Limiting.
+* Documentación automática mediante OpenAPI.
+
+---
+
+# Tecnologías utilizadas
 
 * Python 3.x
 * FastAPI
 * Uvicorn
 * SQLAlchemy
 * Alembic
-* Pydantic v2
 * SQLite
+* Pydantic v2
+* Python-JOSE (JWT)
+* Passlib (bcrypt)
+* SlowAPI (Rate Limiting)
 * Swagger UI / OpenAPI
 
 ---
 
-## Instalación de dependencias
+# Instalación
 
-Clonar el repositorio:
+## Clonar el repositorio
 
 ```bash
 git clone https://github.com/juan-sena/device_systems.git
+
 cd device_systems
 ```
 
-Instalar dependencias:
+## Instalar las dependencias
 
 ```bash
 pip install -r requirements.txt
@@ -36,27 +64,27 @@ pip install -r requirements.txt
 
 ---
 
-## Migraciones con Alembic
+# Migraciones con Alembic
 
-Inicializar Alembic (ya configurado en el proyecto):
+## Inicializar Alembic (solo la primera vez)
 
 ```bash
 alembic init alembic
 ```
 
-Generar una migración:
+## Crear una nueva migración
 
 ```bash
-alembic revision --autogenerate -m "descripción del cambio"
+alembic revision --autogenerate -m "descripcion del cambio"
 ```
 
-Aplicar migraciones:
+## Aplicar todas las migraciones
 
 ```bash
 alembic upgrade head
 ```
 
-Ver historial de migraciones:
+## Consultar el historial
 
 ```bash
 alembic history
@@ -64,25 +92,27 @@ alembic history
 
 ---
 
-## Ejecutar el servidor
+# Ejecutar el proyecto
+
+## Iniciar el servidor
 
 ```bash
 python -m uvicorn app.main:app --reload
 ```
 
-Servidor disponible en:
+Servidor:
 
 ```text
 http://127.0.0.1:8000
 ```
 
-Documentación Swagger:
+Swagger:
 
 ```text
 http://127.0.0.1:8000/docs
 ```
 
-Documentación Redoc:
+Redoc:
 
 ```text
 http://127.0.0.1:8000/redoc
@@ -90,60 +120,185 @@ http://127.0.0.1:8000/redoc
 
 ---
 
-## Endpoints
+# Autenticación
 
-### Users
+La API utiliza autenticación mediante **JWT (JSON Web Token)**.
 
-| Método | Endpoint | Descripción |
-| ------ | -------- | ----------- |
-| GET | /users | Listar usuarios |
-| GET | /users/{user_id} | Obtener usuario por ID |
-| POST | /users | Crear usuario |
-| PUT | /users/{user_id} | Actualizar usuario completo |
-| PATCH | /users/{user_id} | Actualización parcial |
-| DELETE | /users/{user_id} | Eliminar usuario |
-| GET | /users/{user_id}/loans | Préstamos de un usuario |
+## Registrar un usuario
 
-### Devices
+```http
+POST /auth/register
+```
 
-| Método | Endpoint | Descripción |
-| ------ | -------- | ----------- |
-| GET | /devices | Listar dispositivos (con filtros) |
-| GET | /devices/{device_id} | Obtener dispositivo por ID |
-| POST | /devices | Crear dispositivo |
-| PUT | /devices/{device_id} | Actualizar dispositivo completo |
-| PATCH | /devices/{device_id} | Actualización parcial |
-| DELETE | /devices/{device_id} | Eliminar dispositivo |
-| GET | /devices/{device_id}/loans | Historial de préstamos del dispositivo |
+## Iniciar sesión
 
-### Loans
+```http
+POST /auth/login
+```
 
-| Método | Endpoint | Descripción |
-| ------ | -------- | ----------- |
-| GET | /loans | Listar préstamos (con filtros) |
-| GET | /loans/details | Listar préstamos con detalles |
-| GET | /loans/{loan_id} | Obtener préstamo por ID |
-| POST | /loans | Crear préstamo |
-| PATCH | /loans/{loan_id}/return | Devolver dispositivo |
+El login devuelve un token con el siguiente formato:
 
-### Filtros disponibles
+```json
+{
+  "access_token": "eyJhbGc...",
+  "token_type": "bearer"
+}
+```
 
-**Dispositivos:**
-- `GET /devices?device_type=laptop`
-- `GET /devices?is_available=true`
-- `GET /devices?brand=lenovo`
-- `GET /devices?search=thinkpad`
+## Acceder a los endpoints protegidos
 
-**Préstamos:**
-- `GET /loans?status=active`
-- `GET /loans?user_email=ana@sena.edu.co`
-- `GET /loans?device_type=laptop`
+1. Abrir Swagger.
+2. Pulsar **Authorize**.
+3. Copiar el `access_token`.
+4. Pegar el token.
+5. Pulsar **Authorize**.
+
+Una vez autenticado se podrán consumir todos los endpoints protegidos.
 
 ---
 
-## Ejemplos de peticiones y respuestas
+# Endpoints
 
-### Crear usuario
+## Auth
+
+| Método | Endpoint       | Descripción                                 |
+| ------ | -------------- | ------------------------------------------- |
+| POST   | /auth/register | Registrar usuario                           |
+| POST   | /auth/login    | Iniciar sesión                              |
+| GET    | /auth/me       | Obtener información del usuario autenticado |
+
+---
+
+## Users
+
+| Método | Endpoint               | Descripción                     |
+| ------ | ---------------------- | ------------------------------- |
+| GET    | /users                 | Listar usuarios                 |
+| GET    | /users/{user_id}       | Obtener usuario por ID          |
+| POST   | /users                 | Crear usuario                   |
+| PUT    | /users/{user_id}       | Actualizar usuario              |
+| PATCH  | /users/{user_id}       | Actualizar parcialmente         |
+| DELETE | /users/{user_id}       | Eliminar usuario                |
+| GET    | /users/{user_id}/loans | Consultar préstamos del usuario |
+
+---
+
+## Devices
+
+| Método | Endpoint                   | Descripción               |
+| ------ | -------------------------- | ------------------------- |
+| GET    | /devices                   | Listar dispositivos       |
+| GET    | /devices/{device_id}       | Obtener dispositivo       |
+| POST   | /devices                   | Crear dispositivo         |
+| PUT    | /devices/{device_id}       | Actualizar dispositivo    |
+| PATCH  | /devices/{device_id}       | Actualizar parcialmente   |
+| DELETE | /devices/{device_id}       | Eliminar dispositivo      |
+| GET    | /devices/{device_id}/loans | Historial del dispositivo |
+
+---
+
+## Loans
+
+| Método | Endpoint                | Descripción                   |
+| ------ | ----------------------- | ----------------------------- |
+| GET    | /loans                  | Listar préstamos              |
+| GET    | /loans/details          | Listar préstamos con detalles |
+| GET    | /loans/{loan_id}        | Obtener préstamo              |
+| POST   | /loans                  | Crear préstamo                |
+| PATCH  | /loans/{loan_id}/return | Registrar devolución          |
+
+---
+
+# Filtros disponibles
+
+## Dispositivos
+
+* `GET /devices?device_type=laptop`
+* `GET /devices?is_available=true`
+* `GET /devices?brand=lenovo`
+* `GET /devices?search=thinkpad`
+
+## Préstamos
+
+* `GET /loans?status=active`
+* `GET /loans?user_email=ana@sena.edu.co`
+* `GET /loans?device_type=laptop`
+
+
+# Ejemplos de peticiones y respuestas
+
+## Registrar usuario
+
+**POST /auth/register**
+
+Petición:
+
+```json
+{
+  "name": "Juan Pérez",
+  "email": "juan@example.com",
+  "password": "Juan12345",
+  "role": "admin"
+}
+```
+
+Respuesta:
+
+```json
+{
+  "id": 1,
+  "name": "Juan Pérez",
+  "email": "juan@example.com",
+  "role": "admin",
+  "is_active": true
+}
+```
+
+---
+
+## Iniciar sesión
+
+**POST /auth/login**
+
+La autenticación utiliza el formato **OAuth2 Password Flow**.
+
+En Swagger se deben enviar los siguientes campos:
+
+| Campo    | Valor                                       |
+| -------- | ------------------------------------------- |
+| username | [juan@example.com](mailto:juan@example.com) |
+| password | Juan12345                                   |
+
+Respuesta:
+
+```json
+{
+  "access_token": "eyJhbGc...",
+  "token_type": "bearer"
+}
+```
+
+---
+
+## Obtener usuario autenticado
+
+**GET /auth/me**
+
+Respuesta:
+
+```json
+{
+  "id": 1,
+  "name": "Juan Pérez",
+  "email": "juan@example.com",
+  "role": "admin",
+  "is_active": true
+}
+```
+
+---
+
+## Crear usuario
 
 **POST /users**
 
@@ -153,7 +308,9 @@ Petición:
 {
   "name": "Ana Pérez",
   "email": "ana@sena.edu.co",
-  "role": "user"
+  "password": "Ana12345",
+  "role": "user",
+  "is_active": true
 }
 ```
 
@@ -161,18 +318,18 @@ Respuesta:
 
 ```json
 {
-  "id": 1,
+  "id": 2,
   "name": "Ana Pérez",
   "email": "ana@sena.edu.co",
   "role": "user",
   "is_active": true,
-  "created_at": "2024-01-15T10:30:00"
+  "created_at": "2026-06-27T22:00:00"
 }
 ```
 
 ---
 
-### Crear dispositivo
+## Crear dispositivo
 
 **POST /devices**
 
@@ -181,7 +338,7 @@ Petición:
 ```json
 {
   "name": "Laptop Lenovo ThinkPad",
-  "serial_number": "LEN-2024-001",
+  "serial_number": "LEN-001",
   "device_type": "laptop",
   "brand": "Lenovo"
 }
@@ -193,17 +350,17 @@ Respuesta:
 {
   "id": 1,
   "name": "Laptop Lenovo ThinkPad",
-  "serial_number": "LEN-2024-001",
+  "serial_number": "LEN-001",
   "device_type": "laptop",
   "brand": "Lenovo",
   "is_available": true,
-  "created_at": "2024-01-15T10:30:00"
+  "created_at": "2026-06-27T22:50:56"
 }
 ```
 
 ---
 
-### Crear préstamo
+## Crear préstamo
 
 **POST /loans**
 
@@ -221,18 +378,18 @@ Respuesta:
 ```json
 {
   "id": 1,
-  "loan_date": "2024-01-15T10:30:00",
+  "loan_date": "2026-06-27T22:51:43",
   "return_date": null,
   "status": "active",
   "user": {
     "id": 1,
-    "name": "Ana Pérez",
-    "email": "ana@sena.edu.co"
+    "name": "Juan Pérez",
+    "email": "juan@example.com"
   },
   "device": {
     "id": 1,
     "name": "Laptop Lenovo ThinkPad",
-    "serial_number": "LEN-2024-001",
+    "serial_number": "LEN-001",
     "device_type": "laptop"
   }
 }
@@ -240,27 +397,27 @@ Respuesta:
 
 ---
 
-### Devolver dispositivo
+## Devolver dispositivo
 
-**PATCH /loans/1/return**
+**PATCH /loans/{loan_id}/return**
 
 Respuesta:
 
 ```json
 {
   "id": 1,
-  "loan_date": "2024-01-15T10:30:00",
-  "return_date": "2024-01-20T14:00:00",
+  "loan_date": "2026-06-27T22:51:43",
+  "return_date": "2026-06-27T23:05:00",
   "status": "returned",
   "user": {
     "id": 1,
-    "name": "Ana Pérez",
-    "email": "ana@sena.edu.co"
+    "name": "Juan Pérez",
+    "email": "juan@example.com"
   },
   "device": {
     "id": 1,
     "name": "Laptop Lenovo ThinkPad",
-    "serial_number": "LEN-2024-001",
+    "serial_number": "LEN-001",
     "device_type": "laptop"
   }
 }
@@ -268,7 +425,7 @@ Respuesta:
 
 ---
 
-### Consultar préstamos con filtros
+## Consultar préstamos con filtros
 
 **GET /loans?status=active**
 
@@ -278,152 +435,335 @@ Respuesta:
 [
   {
     "id": 1,
-    "loan_date": "2024-01-15T10:30:00",
+    "loan_date": "2026-06-27T22:51:43",
     "return_date": null,
     "status": "active",
     "user": {
       "id": 1,
-      "name": "Ana Pérez",
-      "email": "ana@sena.edu.co"
+      "name": "Juan Pérez",
+      "email": "juan@example.com"
     },
     "device": {
       "id": 1,
       "name": "Laptop Lenovo ThinkPad",
-      "serial_number": "LEN-2024-001",
+      "serial_number": "LEN-001",
       "device_type": "laptop"
     }
   }
 ]
+
+# Códigos de estado HTTP
+
+| Código                   | Descripción                                                       |
+| ------------------------ | ----------------------------------------------------------------- |
+| 200 OK                   | Operación realizada correctamente.                                |
+| 201 Created              | Recurso creado exitosamente.                                      |
+| 204 No Content           | Recurso eliminado correctamente.                                  |
+| 400 Bad Request          | Solicitud inválida o recurso duplicado.                           |
+| 401 Unauthorized         | Usuario no autenticado o token inválido.                          |
+| 403 Forbidden            | El usuario autenticado no tiene permisos para acceder al recurso. |
+| 404 Not Found            | Recurso no encontrado.                                            |
+| 409 Conflict             | Regla de negocio incumplida.                                      |
+| 422 Unprocessable Entity | Error de validación de datos enviados.                            |
+| 429 Too Many Requests    | Límite de solicitudes excedido (Rate Limiting).                   |
+
+---
+
+# Manejo de errores
+
+## Recurso no encontrado
+
+```json
+{
+    "detail": "Usuario no encontrado"
+}
+```
+
+```json
+{
+    "detail": "Dispositivo no encontrado"
+}
+```
+
+```json
+{
+    "detail": "Préstamo no encontrado"
+}
+```
+
+Código HTTP:
+
+```text
+404 Not Found
 ```
 
 ---
 
-## Códigos de estado HTTP utilizados
+## Datos duplicados
 
-| Código | Descripción |
-| ------ | ----------- |
-| 200 OK | Operación exitosa |
-| 201 Created | Recurso creado correctamente |
-| 204 No Content | Eliminación exitosa |
-| 400 Bad Request | Dato duplicado o datos inválidos |
-| 404 Not Found | Recurso no encontrado |
-| 409 Conflict | Regla de negocio incumplida |
-| 422 Unprocessable Entity | Error de validación de datos |
+```json
+{
+    "detail": "El correo ya existe"
+}
+```
+
+```json
+{
+    "detail": "El número de serie ya existe"
+}
+```
+
+Código HTTP:
+
+```text
+400 Bad Request
+```
 
 ---
 
-## Manejo de errores
-
-### Recurso no encontrado
+## Error de autenticación
 
 ```json
 {
-  "detail": "Usuario no encontrado"
+    "detail": "Correo o contraseña incorrectos."
 }
 ```
 
-```json
-{
-  "detail": "Dispositivo no encontrado"
-}
+Código HTTP:
+
+```text
+401 Unauthorized
 ```
-
-```json
-{
-  "detail": "Préstamo no encontrado"
-}
-```
-
-Código HTTP: `404 Not Found`
-
-### Dato duplicado
-
-```json
-{
-  "detail": "El correo ya existe"
-}
-```
-
-```json
-{
-  "detail": "El número de serie ya existe"
-}
-```
-
-Código HTTP: `400 Bad Request`
-
-### Regla de negocio
-
-```json
-{
-  "detail": "El dispositivo no está disponible para préstamo"
-}
-```
-
-```json
-{
-  "detail": "El préstamo ya fue devuelto"
-}
-```
-
-Código HTTP: `409 Conflict`
-
-### Error de validación
-
-Código HTTP: `422 Unprocessable Entity`
 
 ---
 
-## Estructura del proyecto
+## Error de autorización
 
+```json
+{
+    "detail": "No tienes permisos."
+}
 ```
+
+Código HTTP:
+
+```text
+403 Forbidden
+```
+
+---
+
+## Regla de negocio
+
+```json
+{
+    "detail": "El dispositivo no está disponible para préstamo"
+}
+```
+
+```json
+{
+    "detail": "El préstamo ya fue devuelto"
+}
+```
+
+Código HTTP:
+
+```text
+409 Conflict
+```
+
+---
+
+## Error de validación
+
+Código HTTP:
+
+```text
+422 Unprocessable Entity
+```
+
+---
+
+## Límite de solicitudes
+
+Cuando un usuario supera el número permitido de peticiones al endpoint protegido, la API responde con:
+
+Código HTTP:
+
+```text
+429 Too Many Requests
+```
+
+---
+
+# Funcionalidades implementadas
+
+## Gestión de usuarios
+
+* Registro de usuarios.
+* Inicio de sesión mediante JWT.
+* Consulta de usuarios.
+* Actualización completa y parcial.
+* Eliminación de usuarios.
+* Protección mediante autenticación.
+
+---
+
+## Gestión de dispositivos
+
+* Registro de dispositivos.
+* Consulta de dispositivos.
+* Actualización completa y parcial.
+* Eliminación.
+* Filtros por:
+
+  * Tipo.
+  * Marca.
+  * Disponibilidad.
+  * Búsqueda general.
+
+---
+
+## Gestión de préstamos
+
+* Crear préstamos.
+* Registrar devoluciones.
+* Historial de préstamos.
+* Historial por usuario.
+* Historial por dispositivo.
+* Filtros por estado.
+* Filtros por correo.
+* Filtros por tipo de dispositivo.
+
+---
+
+## Seguridad
+
+* JWT Authentication.
+* OAuth2 Password Flow.
+* Hash de contraseñas con bcrypt.
+* Protección de endpoints.
+* Autorización por roles:
+
+  * Admin.
+  * Support.
+  * User.
+
+---
+
+## Calidad del proyecto
+
+* Middleware personalizado.
+* Logging de peticiones.
+* Rate Limiting con SlowAPI.
+* CORS.
+* Validaciones mediante Pydantic.
+* Documentación automática con Swagger.
+* Arquitectura organizada por capas.
+
+---
+
+# Estructura del proyecto
+
+```text
 device_systems/
-│── app/
-│ │── main.py
-│ │── database/
-│ │ │── connection.py
-│ │── models/
-│ │ │── user_model.py
-│ │ │── device_model.py
-│ │ │── loan_model.py
-│ │── schemas/
-│ │ │── user_schema.py
-│ │ │── device_schema.py
-│ │ │── loan_schema.py
-│ │── routes/
-│ │ │── user_routes.py
-│ │ │── device_routes.py
-│ │ │── loan_routes.py
-│ │── services/
-│ │ │── user_service.py
-│ │ │── device_service.py
-│ │ │── loan_service.py
-│ │── dependencies/
-│ │ │── database_dependency.py
 │
-│── alembic/
-│ │── versions/
-│── alembic.ini
-│── requirements.txt
-│── README.md
+├── app/
+│   ├── auth/
+│   │   ├── auth_routes.py
+│   │   ├── auth_service.py
+│   │   └── security.py
+│   │
+│   ├── config/
+│   │   └── limiter.py
+│   │
+│   ├── database/
+│   │   └── connection.py
+│   │
+│   ├── dependencies/
+│   │   ├── auth_dependency.py
+│   │   └── database_dependency.py
+│   │
+│   ├── middlewares/
+│   │   └── custom_middleware.py
+│   │
+│   ├── models/
+│   │   ├── user_model.py
+│   │   ├── device_model.py
+│   │   └── loan_model.py
+│   │
+│   ├── routes/
+│   │   ├── user_routes.py
+│   │   ├── device_routes.py
+│   │   └── loan_routes.py
+│   │
+│   ├── schemas/
+│   │   ├── auth_schema.py
+│   │   ├── user_schema.py
+│   │   ├── device_schema.py
+│   │   └── loan_schema.py
+│   │
+│   ├── services/
+│   │   ├── user_service.py
+│   │   ├── device_service.py
+│   │   └── loan_service.py
+│   │
+│   └── main.py
+│
+├── alembic/
+│   └── versions/
+│
+├── requirements.txt
+├── README.md
+└── .env
 ```
 
 ---
 
-## Swagger UI
+# Swagger UI
 
-La documentación automática está organizada por tags:
-- **Users**
-- **Devices**
-- **Loans**
+La documentación automática está organizada mediante los siguientes grupos:
+
+* Auth
+* Users
+* Devices
+* Loans
 
 Agregar capturas de pantalla de:
 
 1. Página principal de Swagger.
-2. Endpoint GET /users.
-3. Endpoint POST /devices.
-4. Endpoint POST /loans.
-5. Endpoint GET /loans/details.
-6. Endpoint PATCH /loans/{loan_id}/return.
+2. Registro de usuario.
+3. Inicio de sesión.
+4. Endpoint **GET /users**.
+5. Endpoint **POST /devices**.
+6. Endpoint **POST /loans**.
+7. Endpoint **GET /loans/details**.
+8. Endpoint **PATCH /loans/{loan_id}/return**.
 
-![Swagger Principal](docs/swagger-home.png)
+```text
+docs/
+├── swagger-home.png
+├── auth-register.png
+├── auth-login.png
+├── users.png
+├── devices.png
+├── loans.png
+└── return-loan.png
+```
+
+---
+
+# Autor
+
+**Juan Noriega**
+
+Proyecto desarrollado como práctica de Backend utilizando FastAPI, SQLAlchemy y JWT para la gestión de usuarios, dispositivos tecnológicos y préstamos.
+
+---
+
+# Licencia
+
+Este proyecto tiene fines académicos y educativos.
+
+```

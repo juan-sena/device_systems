@@ -1,5 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
+
+from app.config.limiter import limiter
+
+from app.dependencies.auth_dependency import (
+    get_current_active_user,
+    require_admin_or_support
+)
+from app.models.user_model import User
 
 from app.schemas.loan_schema import (
     LoanCreate,
@@ -30,7 +38,9 @@ router_loan = APIRouter(tags=["Loans"])
     summary="Listar préstamos con detalles",
     description="Obtiene todos los préstamos registrados con información del usuario y del dispositivo."
 )
-def obtener_prestamos_detalles(db: Session = Depends(get_db)):
+def obtener_prestamos_detalles(
+    db: Session = Depends(get_db)
+):
     return get_loans_with_details(db)
 
 
@@ -61,7 +71,10 @@ def obtener_prestamos(
         404: {"description": "Préstamo no encontrado"}
     }
 )
-def obtener_prestamo_por_id(loan_id: int, db: Session = Depends(get_db)):
+def obtener_prestamo_por_id(
+    loan_id: int,
+    db: Session = Depends(get_db)
+):
     loan = get_loan_by_id(db, loan_id)
     if not loan:
         raise HTTPException(status_code=404, detail="Préstamo no encontrado")
@@ -80,7 +93,13 @@ def obtener_prestamo_por_id(loan_id: int, db: Session = Depends(get_db)):
         409: {"description": "Dispositivo no disponible"}
     }
 )
-def crear_prestamo(loan_data: LoanCreate, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def crear_prestamo(
+    request: Request,
+    loan_data: LoanCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
     user = get_user_by_id(db, loan_data.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
@@ -90,7 +109,10 @@ def crear_prestamo(loan_data: LoanCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
 
     if not device.is_available:
-        raise HTTPException(status_code=409, detail="El dispositivo no está disponible para préstamo")
+        raise HTTPException(
+            status_code=409,
+            detail="El dispositivo no está disponible para préstamo"
+        )
 
     return create_loan(db, loan_data)
 
@@ -106,7 +128,11 @@ def crear_prestamo(loan_data: LoanCreate, db: Session = Depends(get_db)):
         409: {"description": "El préstamo ya fue devuelto"}
     }
 )
-def devolver_prestamo(loan_id: int, db: Session = Depends(get_db)):
+def devolver_prestamo(
+    loan_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_or_support)
+):
     loan = get_loan_by_id(db, loan_id)
     if not loan:
         raise HTTPException(status_code=404, detail="Préstamo no encontrado")
@@ -127,7 +153,10 @@ def devolver_prestamo(loan_id: int, db: Session = Depends(get_db)):
         404: {"description": "Usuario no encontrado"}
     }
 )
-def obtener_prestamos_usuario(user_id: int, db: Session = Depends(get_db)):
+def obtener_prestamos_usuario(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
     user = get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
@@ -144,7 +173,10 @@ def obtener_prestamos_usuario(user_id: int, db: Session = Depends(get_db)):
         404: {"description": "Dispositivo no encontrado"}
     }
 )
-def obtener_prestamos_dispositivo(device_id: int, db: Session = Depends(get_db)):
+def obtener_prestamos_dispositivo(
+    device_id: int,
+    db: Session = Depends(get_db)
+):
     device = get_device_by_id(db, device_id)
     if not device:
         raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
