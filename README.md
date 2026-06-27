@@ -1,4 +1,10 @@
+# Video de socialización
+
+La explicación completa del proyecto se encuentra disponible en el siguiente enlace:
+
+[(https://www.loom.com/share/c7f77e57d2ea470194cb787572914d69)]
 # device_systems
+
 
 API REST desarrollada con **FastAPI** para la gestión de usuarios, dispositivos tecnológicos y préstamos. El proyecto implementa autenticación mediante JWT, autorización por roles, operaciones CRUD, filtros avanzados, middleware personalizado y documentación automática con Swagger.
 
